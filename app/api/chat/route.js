@@ -13,7 +13,8 @@ import { EmbeddingsFilter } from "langchain/retrievers/document_compressors/embe
 import { OpenSearchVectorStore } from "@langchain/community/vectorstores/opensearch";
 import { Client } from "@opensearch-project/opensearch";
 
-
+import { AwsSigv4Signer } from '@opensearch-project/opensearch/aws';
+import { AWS } from 'aws-sdk'
 
 const customSchema = {
   id: "CustomSchema",
@@ -98,27 +99,55 @@ export async function POST(req) {
     // });
 
 
-    const connectionString = () => {
-      const url = process.env.ES_URL;
-      // Split the URL by '://'
-      const parts = url.split('://');
-      const user = 'admin'
-      const pw = process.env.ES_PASSWORD;
-      // Assemble the connection string
-      const connection_string = `${parts[0]}://${user}:${pw}@${parts[1]}`;
-      return connection_string;
-    }
+    // Keep as reference to connect to cluster via username/pw, need to implement a conditional for dev environments
+    // const connectionString = () => {
+    //   const url = process.env.ES_URL;
+    //   // Split the URL by '://'
+    //   const parts = url.split('://');
+    //   const user = 'admin'
+    //   const pw = process.env.ES_PASSWORD;
+    //   // Assemble the connection string
+    //   const connection_string = `${parts[0]}://${user}:${pw}@${parts[1]}`;
+    //   return connection_string;
+    // }
+
+    // const client = new Client({
+    //   nodes: [connectionString()],
+    //   ssl: {
+    //     // ca: fs.readFileSync(ca_certs_path),
+    //     // You can turn off certificate verification (rejectUnauthorized: false) if you're using self-signed certificates with a hostname mismatch.
+    //     // cert: fs.readFileSync(client_cert_path),
+    //     // key: fs.readFileSync(client_key_path)
+    //     rejectUnauthorized: false
+    //   },
+    // });
 
     const client = new Client({
-      nodes: [connectionString()],
-      ssl: {
-        // ca: fs.readFileSync(ca_certs_path),
-        // You can turn off certificate verification (rejectUnauthorized: false) if you're using self-signed certificates with a hostname mismatch.
-        // cert: fs.readFileSync(client_cert_path),
-        // key: fs.readFileSync(client_key_path)
-        rejectUnauthorized: false
-      },
+        ...AwsSigv4Signer({
+            region: 'eu-west-2',
+            service: 'es',
+            // Must return a Promise that resolve to an AWS.Credentials object.
+            // This function is used to acquire the credentials when the client start and
+            // when the credentials are expired.
+            // The Client will refresh the Credentials only when they are expired.
+            // With AWS SDK V2, Credentials.refreshPromise is used when available to refresh the credentials.
+
+            // Example with AWS SDK V2:
+            getCredentials: () =>
+            new Promise((resolve, reject) => {
+                // Any other method to acquire a new Credentials object can be used.
+                AWS.config.getCredentials((err, credentials) => {
+                if (err) {
+                    reject(err);
+                } else {
+                    resolve(credentials);
+                }
+                });
+            }),
+        }),
+        node: ES_URL, // OpenSearch domain URL
     });
+
 
     const vectorStore = new OpenSearchVectorStore(new OpenAIEmbeddings(), {
       client,
