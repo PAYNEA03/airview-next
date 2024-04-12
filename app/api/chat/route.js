@@ -14,7 +14,9 @@ import { OpenSearchVectorStore } from "@langchain/community/vectorstores/opensea
 import { Client } from "@opensearch-project/opensearch";
 
 import { AwsSigv4Signer } from '@opensearch-project/opensearch/aws';
-import { AWS } from 'aws-sdk'
+import { defaultProvider } from '@aws-sdk/credential-provider-node';
+
+// import { AWS } from 'aws-sdk'
 
 const customSchema = {
   id: "CustomSchema",
@@ -122,32 +124,53 @@ export async function POST(req) {
     //   },
     // });
 
+    // AWS-SDK V2
+    // const client = new Client({
+    //     ...AwsSigv4Signer({
+    //         region: 'eu-west-2',
+    //         service: 'es',
+    //         // Must return a Promise that resolve to an AWS.Credentials object.
+    //         // This function is used to acquire the credentials when the client start and
+    //         // when the credentials are expired.
+    //         // The Client will refresh the Credentials only when they are expired.
+    //         // With AWS SDK V2, Credentials.refreshPromise is used when available to refresh the credentials.
+
+    //         // Example with AWS SDK V2:
+    //         getCredentials: () =>
+    //         new Promise((resolve, reject) => {
+    //             // Any other method to acquire a new Credentials object can be used.
+    //             AWS.config.getCredentials((err, credentials) => {
+    //             if (err) {
+    //                 reject(err);
+    //             } else {
+    //                 resolve(credentials);
+    //             }
+    //             });
+    //         }),
+    //     }),
+    //     node: ES_URL, // OpenSearch domain URL
+    // });
+
+    // AWS-SDK V3
     const client = new Client({
         ...AwsSigv4Signer({
             region: 'eu-west-2',
-            service: 'es',
+            service: 'es',  // 'aoss' for OpenSearch Serverless
             // Must return a Promise that resolve to an AWS.Credentials object.
             // This function is used to acquire the credentials when the client start and
             // when the credentials are expired.
             // The Client will refresh the Credentials only when they are expired.
             // With AWS SDK V2, Credentials.refreshPromise is used when available to refresh the credentials.
 
-            // Example with AWS SDK V2:
-            getCredentials: () =>
-            new Promise((resolve, reject) => {
-                // Any other method to acquire a new Credentials object can be used.
-                AWS.config.getCredentials((err, credentials) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(credentials);
-                }
-                });
-            }),
+            // Example with AWS SDK V3:
+            getCredentials: () => {
+            // Any other method to acquire a new Credentials object can be used.
+            const credentialsProvider = defaultProvider();
+            return credentialsProvider();
+            },
         }),
         node: ES_URL, // OpenSearch domain URL
     });
-
 
     const vectorStore = new OpenSearchVectorStore(new OpenAIEmbeddings(), {
       client,
