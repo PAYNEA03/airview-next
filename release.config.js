@@ -20,7 +20,7 @@ module.exports = {
       "@semantic-release-plus/docker",
       {
         name: {
-          namespace: "airwalk-digital",
+          namespace: "paynea03",
           repository: "airview-next",
         },
         "registry": "ghcr.io",
