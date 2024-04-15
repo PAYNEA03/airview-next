@@ -129,7 +129,7 @@ export async function POST(req) {
     } else {
         client = new Client({
             ...AwsSigv4Signer({
-                region: 'eu-west-2',
+                region: REGION,
                 service: 'es',  // 'aoss' for OpenSearch Serverless
                 // Must return a Promise that resolve to an AWS.Credentials object.
                 // This function is used to acquire the credentials when the client start and
