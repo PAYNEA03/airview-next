@@ -48,8 +48,8 @@ export async function POST(req) {
     const MODEL_TEMPERATURE = parseInt(process.env.MODEL_TEMPERATURE);
     const REDIS_HOST = process.env.REDIS_HOST;
     const ES_URL = process.env.ES_URL;
-    const ES_PASSWORD = process.env.ES_PASSWORD;
-    const ENVIRONMENT = process.env.ENVIRONMENT || 'local';
+    const ES_PASSWORD = process.env.ES_PASSWORD || '';
+    // const ENVIRONMENT = process.env.ENVIRONMENT || 'local';
     const REGION = process.env.REGION || 'eu-west-2';
     //const jsonDelimiter = process.env.REACT_APP_CHAT_MESSAGE_DELIMITER;
     // const jsonDelimiter = '###%%^JSON-DELIMITER^%%###'; // to be updated to extract from env
@@ -102,9 +102,10 @@ export async function POST(req) {
     //   schema: customSchema,
     // });
 
-
+    const env = process.env.NODE_ENV
     let client;
-    if (ENVIRONMENT == "local") {
+    console.log('ENVIRONMENT:', env)
+    if(env == "development"){
         const connectionString = () => {
           const url = process.env.ES_URL;
           // Split the URL by '://'
@@ -126,7 +127,7 @@ export async function POST(req) {
             rejectUnauthorized: false
           },
         });
-    } else {
+    } else if (env == "production"){
         client = new Client({
             ...AwsSigv4Signer({
                 region: REGION,
@@ -147,6 +148,51 @@ export async function POST(req) {
             node: ES_URL, // OpenSearch domain URL
         });
     }
+
+    // let client;
+    // if (ENVIRONMENT == "local") {
+    //     const connectionString = () => {
+    //       const url = process.env.ES_URL;
+    //       // Split the URL by '://'
+    //       const parts = url.split('://');
+    //       const user = 'admin'
+    //       const pw = process.env.ES_PASSWORD;
+    //       // Assemble the connection string
+    //       const connection_string = `${parts[0]}://${user}:${pw}@${parts[1]}`;
+    //       return connection_string;
+    //     }
+    
+    //     client = new Client({
+    //       nodes: [connectionString()],
+    //       ssl: {
+    //         // ca: fs.readFileSync(ca_certs_path),
+    //         // You can turn off certificate verification (rejectUnauthorized: false) if you're using self-signed certificates with a hostname mismatch.
+    //         // cert: fs.readFileSync(client_cert_path),
+    //         // key: fs.readFileSync(client_key_path)
+    //         rejectUnauthorized: false
+    //       },
+    //     });
+    // } else {
+    //     client = new Client({
+    //         ...AwsSigv4Signer({
+    //             region: REGION,
+    //             service: 'es',  // 'aoss' for OpenSearch Serverless
+    //             // Must return a Promise that resolve to an AWS.Credentials object.
+    //             // This function is used to acquire the credentials when the client start and
+    //             // when the credentials are expired.
+    //             // The Client will refresh the Credentials only when they are expired.
+    //             // With AWS SDK V2, Credentials.refreshPromise is used when available to refresh the credentials.
+    
+    //             // Example with AWS SDK V3:
+    //             getCredentials: () => {
+    //             // Any other method to acquire a new Credentials object can be used.
+    //             const credentialsProvider = defaultProvider();
+    //             return credentialsProvider();
+    //             },
+    //         }),
+    //         node: ES_URL, // OpenSearch domain URL
+    //     });
+    // }
 
     const vectorStore = new OpenSearchVectorStore(new OpenAIEmbeddings(), {
       client,
