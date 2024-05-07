@@ -41,4 +41,3 @@ const mdComponents = {
   CustomButton,
 };
 ```
-<!--  -->
